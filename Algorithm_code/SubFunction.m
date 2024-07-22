@@ -59,6 +59,7 @@ for i = 1:I
     line = i+1;     %当前数据起始行数
     for j = 1:info(i).num_gongxu
 
+		%指定CA、CW中工位数量、每一工序可用工位集合、以及在每一工位的处理时间
         % info(i).gongxu(j).num_Clamping = C;
         % info(i).gongxu(j).num_Waiting = W;
         % 
