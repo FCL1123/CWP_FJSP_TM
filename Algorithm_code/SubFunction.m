@@ -1,3 +1,139 @@
+% 初始化info（两个工件信息的结构体）以及基础数据Global
+function [info,Global]=info_Global(x)
+%构建工件信息数据结构
+empty.num_gongxu=[];
+empty.gongxu=[];
+
+empty_gongxu.num_jichuang=[];
+empty_gongxu.data=[];
+empty_gongxu.bianhao=[];
+
+% 存储装夹区不同工位的操作时间
+empty_gongxu.num_Clamping = [];
+empty_gongxu.data_C = [];
+empty_gongxu.bianhao_C = [];
+% 存储待加工区不同工位的操作时间
+empty_gongxu.num_Waiting = [];
+empty_gongxu.data_W = [];
+empty_gongxu.bianhao_W = [];
+% 存储加工区不同机器的操作时间
+empty_gongxu.num_Machine = [];
+empty_gongxu.data_M = [];
+empty_gongxu.bianhao_M = [];
+
+mk = dlmread(x);%textscan
+I = mk(1,1);
+M = mk(1,2);
+
+C = mk(1,4);    %工件信息txt文件中,第一行第四个数字表示装夹区工位数量
+W = mk(1,5);
+
+%repmat重复数组副本，构建1X5结构体
+% info = repmat(empty,1,Global.I);  %工件加工能耗/时间信息表
+info = repmat(empty,1,I);           %工件加工能耗/时间信息表
+num_gongxu_max = 0;     %记录当前任务中，所有工件中最大的工序数量
+for i = 1:I    
+    info(i).num_gongxu = mk(i+1,1);     %当前工件的工序总数
+    if mk(i+1,1) > num_gongxu_max   
+        num_gongxu_max = mk(i+1,1); %更新最大工序数量
+    end
+    info(i).gongxu = repmat(empty_gongxu,1,info(i).num_gongxu);
+
+    k = 2;    
+    for j = 1:info(i).num_gongxu
+        info(i).gongxu(j).num_jichuang = mk(i+1,k);         %读取工件每一工序的可用机床数量
+        n = k+1;
+        % 读取每一工序可用机床编号和加工时间
+        for m = 1:mk(i+1,k)
+            info(i).gongxu(j).bianhao = [info(i).gongxu(j).bianhao mk(i+1,n)];
+            %data数据依次为：工序加工能耗	工序加工时间	对刀时间
+            info(i).gongxu(j).data=[info(i).gongxu(j).data;0 mk(i+1,n+1) 0];
+            n = n+2;
+        end
+        k = k + 2 * mk(i+1,k) + 1;
+    end
+
+    
+    % 读取每一工序可用加工机器数量、编号、操作时间
+    k = 2;
+    line = i+1;     %当前数据起始行数
+    for j = 1:info(i).num_gongxu
+
+        % info(i).gongxu(j).num_Clamping = C;
+        % info(i).gongxu(j).num_Waiting = W;
+        % 
+        % info(i).gongxu(j).bianhao_C = 1:C;
+        % info(i).gongxu(j).bianhao_W = 1:W;
+        % 
+        % info(i).gongxu(j).data_C = 2*ones(1,C);
+        % info(i).gongxu(j).data_W = 3*ones(1,W);
+
+        info(i).gongxu(j).num_Machine = mk(line,k);     %读取工件每一工序的可用装夹区工位数量
+        n = k+1;
+        % 读取每一工序可用装夹区工位编号和操作时间
+        for m=1:mk(line,k)
+            info(i).gongxu(j).bianhao_M = [info(i).gongxu(j).bianhao_M mk(line,n)];
+            info(i).gongxu(j).data_M = [info(i).gongxu(j).data_M mk(line,n+1)];
+            n = n+2;
+        end
+        k = k + 2 * mk(line,k) + 1;
+    end
+
+    % 读取每一工序可用装夹区工位数量、编号、操作时间
+    k = 2;
+    line = i+1+I+1;     %当前数据起始行数
+    for j = 1:info(i).num_gongxu
+        info(i).gongxu(j).num_Clamping = mk(line,k);     %读取工件每一工序的可用装夹区工位数量
+        n = k+1;
+        % 读取每一工序可用装夹区工位编号和操作时间
+        for m=1:mk(line,k)
+            info(i).gongxu(j).bianhao_C = [info(i).gongxu(j).bianhao_C mk(line,n)];
+            info(i).gongxu(j).data_C = [info(i).gongxu(j).data_C mk(line,n+1)];
+            n = n+2;
+        end
+        k = k + 2 * mk(line,k) + 1;
+    end
+
+    % 读取每一工序可用待加工区工位数量、编号、操作时间
+    k = 2;
+    line = i+1+2*(I+1);     %当前数据起始行数
+    for j = 1:info(i).num_gongxu
+        info(i).gongxu(j).num_Waiting = mk(line,k);     %读取工件每一工序的可用装夹区工位数量
+        n = k+1;
+        % 读取每一工序可用装夹区工位编号和操作时间
+        for m=1:mk(line,k)
+            info(i).gongxu(j).bianhao_W = [info(i).gongxu(j).bianhao_W mk(line,n)];
+            info(i).gongxu(j).data_W = [info(i).gongxu(j).data_W mk(line,n+1)];
+            n = n+2;
+        end
+        k = k + 2 * mk(line,k) + 1;
+    end
+
+end
+
+%生成基础数据
+Ai = zeros(1,I);%工件到达时间Ai
+Di = ones(1,I).*60;%交货期Di
+M_power = zeros(M,2);%机床功率M_power
+Ni = ones(1,I);%每种工件的加工数量Ni
+
+Global.C = C;   %装夹区工位数量
+Global.W = W;   %待加工区工位数量
+
+Global.M = M;%可用机床数量
+Global.I = I;%工件种类数
+Global.Max_operations = num_gongxu_max;%工序数量最大值
+Global.m_power = M_power;
+Global.Ni = Ni;%加工数量都为1
+Global.Ai = Ai;%到达时间都为0
+Global.Di = Di;
+Global.xishu=[1,0];
+% Global.fun = @(x) fun_gai(x);%改成fun1就是有故障的。
+% Global.fun = @(x) fun_gai(x,Global,info);%改成fun1就是有故障的。
+Global.fun = @(x) fun_cwp(x,Global,info);
+end
+
+
 %% CWPFJSP_TM模型的目标函数，计算适应度值，
 % 输入为工序排序、装夹工位选择、待加工工位选择、机器选择数组
 function [y,release_time,used_device,T_start,T_need,T_end,T_total,T_jiagong,T_kongxian] = fun_cwp(x,Global,info)
